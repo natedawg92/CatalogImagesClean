@@ -7,6 +7,9 @@
                 <item name="CatalogImagesInfo" xsi:type="object">
                     NathanDay\CatalogImagesClean\Command\InfoCommand
                 </item>
+                <item name="CatalogImagesUnused" xsi:type="object">
+                    NathanDay\CatalogImagesClean\Command\CleanCommand
+                </item>
             </argument>
         </arguments>
     </type>

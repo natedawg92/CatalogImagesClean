@@ -6,6 +6,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Magento\Framework\Console\Cli;
 
+/**
+ * Class InfoCommand
+ *
+ * @package NathanDay\CatalogImagesClean\Command
+ */
 class InfoCommand extends AbstractCommand
 {
     /**
@@ -51,10 +56,8 @@ class InfoCommand extends AbstractCommand
         $output->writeln('<info>' . $this->getDatabaseProductImageCount() . ' Unique Images in Database</info>');
         $output->writeln('<info>' . $this->getPhysicalProductImageCount() . ' Images in Filesystem</info>');
 
-        if (
-            $input->getOption(self::INPUT_KEY_MISSING)
-            || $input->getOption(self::INPUT_KEY_UNUSED)
-        ) {
+        if ($input->getOption(self::INPUT_KEY_MISSING)
+            || $input->getOption(self::INPUT_KEY_UNUSED)) {
             if ($input->getOption(self::INPUT_KEY_MISSING)) {
                 $this->executeMissingImages($output);
             }

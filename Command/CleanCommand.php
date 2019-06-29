@@ -11,6 +11,7 @@ use Magento\Framework\Console\Cli;
 
 /**
  * Class CleanCommand
+ *
  * @package NathanDay\CatalogImagesClean\Command
  */
 class CleanCommand extends AbstractCommand
@@ -66,10 +67,8 @@ class CleanCommand extends AbstractCommand
         $output->writeln('<fg=green;options=bold>Catalog Product Image Cleaning</>');
         $output->writeln('<fg=green;options=bold>======================================</>');
 
-        if (
-            $input->getOption(self::INPUT_KEY_MISSING)
-            || $input->getOption(self::INPUT_KEY_UNUSED)
-        ) {
+        if ($input->getOption(self::INPUT_KEY_MISSING)
+            || $input->getOption(self::INPUT_KEY_UNUSED)) {
             if ($input->getOption(self::INPUT_KEY_MISSING)) {
                 $this->executeMissingImages($input, $output);
             }
@@ -109,7 +108,7 @@ class CleanCommand extends AbstractCommand
         } else {
             if ($missingImageCount < 0) {
                 $output->writeln('<comment>You are about to remove database Records.</comment>');
-                $output->writeln('<comment>It is recommended that you take a database backup before proceeding</comment>');
+                $output->writeln('<comment>It is recommended to take a database backup before proceeding</comment>');
                 $output->writeln('');
 
                 /** @var QuestionHelper $helper */
@@ -138,7 +137,6 @@ class CleanCommand extends AbstractCommand
         $output->writeln(PHP_EOL . '<fg=green;options=bold>======================================</>');
     }
 
-
     /**
      * Execute Unused Images Cleanup Logic
      *
@@ -163,7 +161,7 @@ class CleanCommand extends AbstractCommand
             if ($unusedImageCount > 0) {
                 $output->writeln('');
                 $output->writeln('<comment>You are about to remove catalog image files.</comment>');
-                $output->writeln('<comment>It is recommended that you take a media backup before proceeding</comment>');
+                $output->writeln('<comment>It is recommended to take a media backup before proceeding</comment>');
                 $output->writeln('');
 
                 /** @var QuestionHelper $helper */

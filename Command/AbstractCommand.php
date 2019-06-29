@@ -1,5 +1,4 @@
 <?php
-
 namespace NathanDay\CatalogImagesClean\Command;
 
 use Symfony\Component\Console\Command\Command;
@@ -15,6 +14,11 @@ use Magento\Catalog\Model\ResourceModel\Product\Image as ProductImage;
 use Magento\Catalog\Model\ResourceModel\Product\Gallery;
 use Magento\Framework\Filesystem\Driver\File;
 
+/**
+ * Class AbstractCommand
+ *
+ * @package NathanDay\CatalogImagesClean\Command
+ */
 class AbstractCommand extends Command
 {
     /** Input Keys */
@@ -144,7 +148,8 @@ class AbstractCommand extends Command
             $physicalImages = $this->fileDriver->readDirectoryRecursively($mediaDirectoryPath);
 
             foreach ($physicalImages as $imagePath) {
-                if (is_file($imagePath) && !strpos($imagePath, DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR)) {
+                if ($this->fileDriver->isFile($imagePath)
+                    && strpos($imagePath, DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR) === false) {
                     $this->physicalImages[] = substr($imagePath, strlen($mediaDirectoryPath));
                 }
             }

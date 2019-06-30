@@ -32,11 +32,11 @@ class AbstractCommand extends Command
     protected $mediaDirectory;
 
     /** @var array */
-    protected $databaseImages = [];
-    protected $missingImages = [];
-    protected $physicalImages = [];
-    protected $unusedImages = [];
-    protected $duplicateImages = [];
+    protected $databaseImages;
+    protected $missingImages;
+    protected $physicalImages;
+    protected $unusedImages;
+    protected $duplicateImages;
 
     /** @var MediaConfig */
     protected $imageConfig;
@@ -92,7 +92,8 @@ class AbstractCommand extends Command
      */
     protected function getDatabaseProductImages()
     {
-        if (empty($this->databaseImages)) {
+        if (!isset($this->databaseImages)) {
+            $this->databaseImages = [];
             foreach ($this->getAllDatabaseProductImages() as $image) {
                 $this->databaseImages[$image['id']] = $image['filepath'];
             }
@@ -116,7 +117,8 @@ class AbstractCommand extends Command
      */
     protected function getMissingProductImages()
     {
-        if (empty($this->missingImages)) {
+        if (!isset($this->missingImages)) {
+            $this->missingImages = [];
             foreach ($this->getDatabaseProductImages() as $key => $imagePath) {
                 if (!$this->doesFileExist($imagePath)) {
                     $this->missingImages[$key] = $imagePath;
@@ -144,7 +146,8 @@ class AbstractCommand extends Command
     protected function getPhysicalProductImages()
     {
         $mediaDirectoryPath = $this->mediaDirectory->getAbsolutePath($this->imageConfig->getBaseMediaPath());
-        if (empty($this->physicalImages)) {
+        if (!isset($this->physicalImages)) {
+            $this->physicalImages = [];
             $physicalImages = $this->fileDriver->readDirectoryRecursively($mediaDirectoryPath);
 
             foreach ($physicalImages as $imagePath) {
@@ -174,7 +177,8 @@ class AbstractCommand extends Command
      */
     protected function getUnusedProductImages()
     {
-        if (empty($this->unusedImages)) {
+        if (!isset($this->unusedImages)) {
+            $this->unusedImages = [];
             $this->unusedImages = array_diff($this->getPhysicalProductImages(), $this->getDatabaseProductImages());
         }
 

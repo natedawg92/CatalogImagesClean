@@ -1,11 +1,11 @@
-Magic42 CatalogImagesClean Extension
+NathanDay CatalogImagesClean Extension
 =====================
 
 Facts
 -----
 - version: 1.0.0
-- extension key: Magic42_CatalogImagesClean
-- [extension on GitHub](https://github.com/natedawg92/CatalogImageClean)
+- extension key: NathanDay_CatalogImagesClean
+- [extension on GitHub](https://github.com/natedawg92/CatalogImagesClean)
 
 Description
 -----------
@@ -23,16 +23,16 @@ Compatibility
 Installation Instructions
 -------------------------
 ```
-composer config repositories.catalogimagesclean git git@github.com:natedawg92/CatalogImageClean.git
-composer require nathanday/module-catalog-image-clean
-php bin/magento module:enable NathanDay_CatalogImageClean
+composer config repositories.catalogimagesclean git git@github.com:natedawg92/CatalogImagesClean.git
+composer require nathanday/module-catalog-images-clean
+php bin/magento module:enable NathanDay_CatalogImagesClean
 php bin/magento setup:upgrade
 ```
 
 Uninstallation
 --------------
 ```
-php bin/magento module:uninstall NathanDay_CatalogImageClean
+php bin/magento module:uninstall NathanDay_CatalogImagesClean
 ```
 
 Usage
@@ -134,4 +134,4 @@ Licence
 
 Copyright
 ---------
-(c) 2019 Magic42
+(c) 2020 Nathan Day

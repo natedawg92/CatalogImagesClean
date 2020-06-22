@@ -18,10 +18,11 @@ class InfoCommand extends AbstractCommand
     const INPUT_KEY_PHYSICAL = 'physical';
 
     protected $functionMap = [
-        self::INPUT_KEY_DATABASE => 'executeDatabaseImages',
-        self::INPUT_KEY_PHYSICAL => 'executePhysicalImages',
-        self::INPUT_KEY_MISSING  => 'executeMissingImages',
-        self::INPUT_KEY_UNUSED   => 'executeUnusedImages',
+        self::INPUT_KEY_DATABASE  => 'executeDatabaseImages',
+        self::INPUT_KEY_PHYSICAL  => 'executePhysicalImages',
+        self::INPUT_KEY_MISSING   => 'executeMissingImages',
+        self::INPUT_KEY_UNUSED    => 'executeUnusedImages',
+        self::INPUT_KEY_DUPLICATE => 'executeDuplicateImages',
     ];
 
     /**
@@ -43,6 +44,11 @@ class InfoCommand extends AbstractCommand
                 'm',
                 InputOption::VALUE_NONE,
                 'Info on missing product images'
+            )->addOption(
+                self::INPUT_KEY_DUPLICATE,
+                't',
+                InputOption::VALUE_NONE,
+                'Info on duplicate product images'
             )->addOption(
                 self::INPUT_KEY_DATABASE,
                 'd',
@@ -125,7 +131,7 @@ class InfoCommand extends AbstractCommand
         $output->writeln('<info>' . $physicalImageCount . ' Images in Filesystem</info>');
 
         if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE && $physicalImageCount > 0) {
-            $physicalImages = $this->getPhysicalProductImages();
+            $physicalImages = array_keys($this->getPhysicalProductImages());
             $longestString = max(array_map('strlen', $physicalImages));
 
             $output->writeln('+-' . str_pad('', $longestString, '-') . '-+');
@@ -196,6 +202,69 @@ class InfoCommand extends AbstractCommand
 
                 $output->writeln('+-' . str_pad('', $longestString, '-') . '-+');
             }
+        }
+    }
+
+    /**
+     * Execute Duplicate Images Information Logic
+     *
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @throws \Magento\Framework\Exception\FileSystemException
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    protected function executeDuplicateImages(OutputInterface $output)
+    {
+        $output->writeln('<info>' . $this->getDuplicateProductImageCount() . ' Duplicate Images</info>');
+
+        if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE
+            && $this->getDuplicateProductImageCount() > 0) {
+            $imagePaths = [];
+            array_walk_recursive($duplicateImages, function ($a) use (&$imagePaths) { $imagePaths[] = $a; });
+            $longestString = max(array_map('strlen', array_merge($imagePaths, ['Duplicate of'])));
+
+            $output->writeln(
+                '+-'
+                . str_pad('', $longestString, '-')
+                . '-+-'
+                . str_pad('', $longestString, '-')
+                . '-+'
+            );
+            $output->writeln(
+                '| '
+                . str_pad('Filename', $longestString)
+                . ' | '
+                . str_pad('Duplicate of', $longestString)
+                . ' |'
+            );
+            $output->writeln(
+                '+-'
+                . str_pad('', $longestString, '-')
+                . '-+-'
+                . str_pad('', $longestString, '-')
+                . '-+'
+            );
+
+            foreach ($duplicateImages as $hash => $images) {
+                sort($images);
+                foreach (array_splice($images, 1) as $image) {
+                    $output->writeln(
+                        '| '
+                        . str_pad($image, $longestString)
+                        . ' | '
+                        . str_pad($images[0], $longestString)
+                        . ' |'
+                    );
+                }
+            }
+
+            $output->writeln(
+                '+-'
+                . str_pad('', $longestString, '-')
+                . '-+-'
+                . str_pad('', $longestString, '-')
+                . '-+'
+            );
         }
     }
 }

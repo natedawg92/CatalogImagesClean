@@ -1,6 +1,7 @@
 <?php
 namespace NathanDay\CatalogImagesClean\Command;
 
+use Magento\Catalog\Model\ResourceModel\Product\Gallery;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\QuestionHelper;
@@ -41,6 +42,11 @@ class CleanCommand extends AbstractCommand
                 InputOption::VALUE_NONE,
                 'Remove missing product image Records'
             )->addOption(
+                self::INPUT_KEY_DUPLICATE,
+                't',
+                InputOption::VALUE_NONE,
+                'Remove duplicate product images and update database Records'
+            )->addOption(
                 self::INPUT_KEY_DRYRUN,
                 'd',
                 InputOption::VALUE_NONE,
@@ -68,7 +74,8 @@ class CleanCommand extends AbstractCommand
         $output->writeln('<fg=green;options=bold>======================================</>');
 
         if ($input->getOption(self::INPUT_KEY_MISSING)
-            || $input->getOption(self::INPUT_KEY_UNUSED)) {
+            || $input->getOption(self::INPUT_KEY_UNUSED)
+            || $input->getOption(self::INPUT_KEY_DUPLICATE)) {
             if ($input->getOption(self::INPUT_KEY_MISSING)) {
                 $this->executeMissingImages($input, $output);
             }
@@ -76,9 +83,14 @@ class CleanCommand extends AbstractCommand
             if ($input->getOption(self::INPUT_KEY_UNUSED)) {
                 $this->executeUnusedImages($input, $output);
             }
+
+            if ($input->getOption(self::INPUT_KEY_DUPLICATE)) {
+                $this->executeDuplicateImages($input, $output);
+            }
         } else {
             $this->executeMissingImages($input, $output);
             $this->executeUnusedImages($input, $output);
+            $this->executeDuplicateImages($input, $output);
         }
 
         return Cli::RETURN_SUCCESS;
@@ -198,6 +210,103 @@ class CleanCommand extends AbstractCommand
     }
 
     /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @throws \Magento\Framework\Exception\FileSystemException
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    public function executeDuplicateImages(InputInterface $input, OutputInterface $output)
+    {
+        $output->writeln(PHP_EOL . '<info>Duplicate Product Images</info>' . PHP_EOL);
+
+        $dryRun = $input->getOption(self::INPUT_KEY_DRYRUN);
+        $duplicateImages = $this->getDuplicateProductImages();
+        $duplicateImageCount = $this->getDuplicateProductImageCount();
+        $databaseRecords = $this->getDatabaseProductImages();
+        $databaseRecordCount = 0;
+
+        foreach ($duplicateImages as $hash => $images) {
+            sort($images);
+            $newImagesArray = [];
+            $newImagesArray['keeper'] = $images[0];
+            unset($images[0]);
+
+            foreach ($images as $image) {
+                $newImagesArray[$image] = array_keys($databaseRecords, $image);
+                $databaseRecordCount += count($newImagesArray[$image]);
+            }
+
+            $duplicateImages[$hash] = $newImagesArray;
+        }
+
+        if ($dryRun) {
+            $output->writeln($duplicateImageCount . ' Catalog product image files to be deleted');
+            $output->writeln('and ' . $databaseRecordCount . ' Database Records to be updated');
+            $this->verboseDuplicateImages($output, $duplicateImages);
+            $output->writeln(PHP_EOL . '<fg=green;options=bold>======================================</>');
+
+            return true;
+        }
+
+        if ($duplicateImageCount > 0) {
+            $output->writeln('');
+            $output->writeln(
+                '<comment>You are about to remove catalog image files ad update database records.</comment>'
+            );
+            $output->writeln(
+                '<comment>It is recommended to take a media and database backup before proceeding</comment>'
+            );
+            $output->writeln('');
+
+            /** @var QuestionHelper $helper */
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion(
+                '<question>Do you want to continue? [y/N]:</question> ',
+                false
+            );
+
+            if (!$helper->ask($input, $output, $question) && $input->isInteractive()) {
+                $output->writeln('<error>Not Proceeding</error>');
+                $output->writeln(PHP_EOL . '<fg=green;options=bold>======================================</>');
+
+                return Cli::RETURN_FAILURE;
+            }
+
+            $output->writeln('Deleting catalog images');
+            $this->verboseDuplicateImages($output, $duplicateImages);
+
+            $progress = new ProgressBar($output, $databaseRecordCount + $duplicateImageCount);
+            $progress->setFormat('<comment>%message%</comment> %current%/%max% [%bar%] %percent:3s%% %elapsed%');
+
+            foreach ($duplicateImages as $hash => $data) {
+                foreach ($data as $key => $dbRecords) {
+                    if ($key == 'keeper') continue;
+
+                    $progress->setMessage('Deleting: ' . $key);
+                    $this->fileDriver->deleteFile($this->getFullImagePath($key));
+                    $progress->advance();
+
+                    foreach ($dbRecords as $dbRecord) {
+                        $progress->setMessage('Update DB Record: ' . $dbRecord);
+                        $this->gallery->saveDataRow(
+                            Gallery::GALLERY_TABLE,
+                            [
+                                'value_id' => $dbRecord,
+                                'value' => $data['keeper'],
+                            ]
+                        );
+                        $progress->advance();
+                    }
+                }
+            }
+        } else {
+            $output->writeln('There are no duplicate images to delete or update');
+        }
+
+        $output->writeln(PHP_EOL . '<fg=green;options=bold>======================================</>');
+    }
+
+    /**
      * Verbose Missing Images Message
      *
      * @param OutputInterface $output
@@ -240,6 +349,42 @@ class CleanCommand extends AbstractCommand
             }
 
             $output->writeln('+-' . str_pad('', $longestString, '-') . '-+');
+        }
+    }
+
+    protected function verboseDuplicateImages(OutputInterface $output, array $duplicateImages)
+    {
+        if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE
+            && $this->getDuplicateProductImageCount() > 0) {
+            $imagePaths = [];
+            array_walk_recursive($duplicateImages, function ($a) use (&$imagePaths) { $imagePaths[] = $a; });
+            $headers = ['Filename', 'Duplicate of', 'Database Records'];
+            $longestString = max(array_map('strlen', array_merge($imagePaths, $headers)));
+
+            $divider = $this->getOutputDivider($headers, $longestString);
+            $titleLine = $this->getOutputTitles($headers, $longestString);
+
+            $output->writeln($divider);
+            $output->writeln($titleLine);
+            $output->writeln($divider);
+
+            foreach ($duplicateImages as $hash => $data) {
+                foreach ($data as $key => $dbRecords) {
+                    if ($key == 'keeper') continue;
+
+                    $output->writeln(
+                        '| '
+                        . str_pad($key, $longestString)
+                        . ' | '
+                        . str_pad($data['keeper'], $longestString)
+                        . ' | '
+                        . str_pad(count($dbRecords), $longestString)
+                        . ' |'
+                    );
+                }
+            }
+
+            $output->writeln($divider);
         }
     }
 }

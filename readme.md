@@ -41,7 +41,7 @@ Usage
 **Info Command**
 
 ```
-php bin/magento catalog:images:info
+php bin/magento catalog:images:info             
 Description:
   Information about Unused and/or Missing Images
 
@@ -51,6 +51,9 @@ Usage:
 Options:
   -u, --unused          Info on unused product images
   -m, --missing         Info on missing product images
+  -t, --duplicate       Info on duplicate product images
+  -d, --database        Info on Product images in the Database
+  -p, --physical        Info on Product images in the filesystem
   -h, --help            Display this help message
   -q, --quiet           Do not output any message
   -V, --version         Display this application version
@@ -58,9 +61,9 @@ Options:
       --no-ansi         Disable ANSI output
   -n, --no-interaction  Do not ask any interactive question
   -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
-
 ```
-For Details of both Unused and Missing images you do not need to specify any particular flag, if you want information on one or the other specify which flag you require
+For Details of Unused, Missing and Duplicated images you do not need to specify any particular flag, 
+if you want information on one or more, specify which flag you require
 
 Sample Output
 
@@ -73,11 +76,14 @@ Catalog Product Image Information
 802 Images in Filesystem
 0 Missing Images
 749 Unused Images
+78 Duplicate Images
 
 ```
 
-for more detailed information add `-v` to the command and this will print out a list of unused and/or missing images where there is any.
-in the case of missing images the verbose flag will print a list of files and how many times that file appears in the gallery records.
+for more detailed information add `-v` to the command and this will print out detailed information specific for each type.
+- in the case of missing images the verbose flag will print a list of files and how many times that file appears in the gallery records.
+- in the case of unused images this will print out a list of images that are present in the filesystem but not in the database
+- in the case of duplicated date, this will print a list of images and what they are a duplicate of
 
 **Clean Command**
 
@@ -93,6 +99,7 @@ Usage:
 Options:
   -u, --unused          Delete unused product images
   -m, --missing         Remove missing product image Records
+  -t, --duplicate       Remove duplicate product images and update database Records
   -d, --dry-run         Dry Run, don't make any changes
   -h, --help            Display this help message
   -q, --quiet           Do not output any message
@@ -100,20 +107,20 @@ Options:
       --ansi            Force ANSI output
       --no-ansi         Disable ANSI output
   -n, --no-interaction  Do not ask any interactive question
-  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug```
 ```
 
 **Important**: Before utilising this command it is recommended to take a Database and Media Backup.
 
-The clean command will process through all actions to remove any Missing Image records or delete any unused images. As with the info command you can specify an individual subset of images to clean e.g. `--missing` will only action the clean command for missing images.
+The clean command will process through all actions to clean up your catalog image files and database records. As with the info command you can specify an individual subset of images to clean e.g. `--missing` will only action the clean command for missing images.
 
 you can specify the `--dry-run` flag which will print out what actions would be taken.
 
-The verbose flag `-v` can also be added to the command to print a list of the Images that will be updated.
+The verbose flag `-v` can also be added to the command to print a list of the Images or database records that will be updated.
 
-When using this command without the `--dry-run` flag you will shown a recomendation to make an appropriate backup before proceeding at which point you will be asked to confirm you want to proceed. 
+When using this command without the `--dry-run` flag you will shown a recommendation to make an appropriate backup before proceeding at which point you will be asked to confirm you want to proceed. 
 
-after this point the command will proceed to Update your database to remove any instances of missing image recors and/or Delete files from the media directory that are not associated with any product, depending on your choice of which subsets to clean.
+after this point the command will proceed to Update your database to remove any instances of missing image records and/or Delete files from the media directory that are not associated with any product, depending on your choice of which subsets to clean.
 
 
 Support

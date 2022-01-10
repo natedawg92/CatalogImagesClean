@@ -320,27 +320,35 @@ class AbstractCommand extends Command
     }
 
     /**
-     * @param string $filepath
+     * @param string|null $filepath
      *
      * @return bool
      * @throws FileSystemException
      */
     protected function doesFileExist(
-        string $filepath
+        ?string $filepath
     ): bool {
+        if (!$filepath) {
+            return false;
+        }
+
         return $this->fileDriver->isExists($this->getFullImagePath($filepath));
     }
 
     /**
-     * @param string $imagePath
+     * @param string|null $imagePath
      *
      * @return bool
      * @throws FileSystemException
      */
     protected function deleteFile(
-        string $imagePath
-    ) {
-        return $this->fileDriver->deleteFile($this->getFullImagePath($imagePath));
+        ?string $imagePath
+    ): bool {
+        if ($imagePath && $this->doesFileExist($imagePath)) {
+            return $this->fileDriver->deleteFile($this->getFullImagePath($imagePath));
+        }
+
+        return false;
     }
 
     /**

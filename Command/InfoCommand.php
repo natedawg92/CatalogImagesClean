@@ -242,6 +242,7 @@ class InfoCommand extends AbstractCommand
             && $this->getDuplicateProductImageCount() > 0
         ) {
             $imagePaths = [];
+            $duplicateImages = $this->getDuplicateProductImages();
             array_walk_recursive(
                 $duplicateImages,
                 function ($a) use (&$imagePaths) {

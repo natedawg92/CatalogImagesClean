@@ -1,24 +1,27 @@
 {
     "name": "nathanday/module-catalog-images-clean",
-    "description": "Add your description here",
     "type": "magento2-module",
+    "description": "Magento 2 module to facilitate maintenance of catalog images",
     "license": [
         "proprietary"
     ],
-    "authors":[
+    "authors": [
         {
-            "name":"Nathan Day",
-            "email":"nathanday92@gmail.com"
+            "name": "Nathan Day",
+            "email": "nathanday92@gmail.com"
         }
     ],
     "require": {
+        "magento/framework": ">=100.0.1",
+        "magento/module-catalog": ">=100.0.1",
+        "php": "~7.3.0||~7.4.0"
     },
     "autoload": {
-        "files": [
-            "registration.php"
-        ],
         "psr-4": {
             "NathanDay\\CatalogImagesClean\\": ""
-        }
+        },
+        "files": [
+            "registration.php"
+        ]
     }
 }

@@ -1,18 +1,22 @@
 <?php
+
 namespace NathanDay\CatalogImagesClean\Command;
 
-use Symfony\Component\Console\Command\Command;
-use Magento\Framework\Filesystem;
-use Magento\Framework\App\Filesystem\DirectoryList;
-use Magento\Framework\Filesystem\Directory\WriteInterface;
 use Magento\Catalog\Model\Product\Media\ConfigInterface as MediaConfig;
+use Magento\Catalog\Model\ResourceModel\Product\Gallery;
+use Magento\Catalog\Model\ResourceModel\Product\Image as ProductImage;
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\DB\Query\BatchIteratorInterface;
 use Magento\Framework\DB\Query\Generator;
 use Magento\Framework\DB\Select;
-use Magento\Framework\App\ResourceConnection;
-use Magento\Catalog\Model\ResourceModel\Product\Image as ProductImage;
-use Magento\Catalog\Model\ResourceModel\Product\Gallery;
+use Magento\Framework\Exception\FileSystemException;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Filesystem;
+use Magento\Framework\Filesystem\Directory\WriteInterface;
 use Magento\Framework\Filesystem\Driver\File;
+use Symfony\Component\Console\Command\Command;
 
 /**
  * Class AbstractCommand
@@ -22,8 +26,8 @@ use Magento\Framework\Filesystem\Driver\File;
 class AbstractCommand extends Command
 {
     /** Input Keys */
-    const INPUT_KEY_MISSING   = 'missing';
-    const INPUT_KEY_UNUSED    = 'unused';
+    const INPUT_KEY_MISSING = 'missing';
+    const INPUT_KEY_UNUSED = 'unused';
     const INPUT_KEY_DUPLICATE = 'duplicate';
 
     /** @var Filesystem */
@@ -63,6 +67,20 @@ class AbstractCommand extends Command
     /** @var Gallery */
     protected $gallery;
 
+    /**
+     * AbstractCommand constructor.
+     *
+     * @param Generator $generator
+     * @param ResourceConnection $resourceConnection
+     * @param Filesystem $filesystem
+     * @param MediaConfig $imageConfig
+     * @param ProductImage $productImage
+     * @param File $fileDriver
+     * @param Gallery $gallery
+     * @param int $batchSize
+     *
+     * @throws FileSystemException
+     */
     public function __construct(
         Generator $generator,
         ResourceConnection $resourceConnection,
@@ -89,12 +107,14 @@ class AbstractCommand extends Command
 
     /**
      * @return array
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
-    protected function getDatabaseProductImages(array $filter = [])
-    {
+    protected function getDatabaseProductImages(
+        array $filter = []
+    ): array {
         if (!isset($this->databaseImages)) {
             $this->databaseImages = [];
+
             foreach ($this->getDatabaseProductImagesGenerator($filter) as $image) {
                 $this->databaseImages[$image['id']] = $image['filepath'];
             }
@@ -106,20 +126,21 @@ class AbstractCommand extends Command
     /**
      * @return int
      */
-    protected function getDatabaseProductImageCount()
+    protected function getDatabaseProductImageCount(): int
     {
         return $this->productImage->getCountAllProductImages();
     }
 
     /**
-     * @return mixed
-     * @throws \Magento\Framework\Exception\FileSystemException
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @return array
+     * @throws FileSystemException
+     * @throws LocalizedException
      */
-    protected function getMissingProductImages()
+    protected function getMissingProductImages(): array
     {
         if (!isset($this->missingImages)) {
             $this->missingImages = [];
+
             foreach ($this->getDatabaseProductImages() as $key => $imagePath) {
                 if (!$this->doesFileExist($imagePath)) {
                     $this->missingImages[$key] = $imagePath;
@@ -132,8 +153,8 @@ class AbstractCommand extends Command
 
     /**
      * @return int
-     * @throws \Magento\Framework\Exception\FileSystemException
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws FileSystemException
+     * @throws LocalizedException
      */
     public function getMissingProductImageCount()
     {
@@ -141,19 +162,21 @@ class AbstractCommand extends Command
     }
 
     /**
-     * @return mixed
-     * @throws \Magento\Framework\Exception\FileSystemException
+     * @return array
+     * @throws FileSystemException
      */
-    protected function getPhysicalProductImages()
+    protected function getPhysicalProductImages(): array
     {
         $mediaDirectoryPath = $this->mediaDirectory->getAbsolutePath($this->imageConfig->getBaseMediaPath());
+
         if (!isset($this->physicalImages)) {
             $this->physicalImages = [];
             $physicalImages = $this->fileDriver->readDirectoryRecursively($mediaDirectoryPath);
 
             foreach ($physicalImages as $imagePath) {
                 if ($this->fileDriver->isFile($imagePath)
-                    && strpos($imagePath, DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR) === false) {
+                    && strpos($imagePath, DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR) === false
+                ) {
                     $this->physicalImages[substr($imagePath, strlen($mediaDirectoryPath))] = [
                         'hash' => md5_file($imagePath),
                         'filesize' => filesize($imagePath),
@@ -167,23 +190,26 @@ class AbstractCommand extends Command
 
     /**
      * @return int
-     * @throws \Magento\Framework\Exception\FileSystemException
+     * @throws FileSystemException
      */
-    protected function getPhysicalProductImageCount()
+    protected function getPhysicalProductImageCount(): int
     {
         return count(array_keys($this->getPhysicalProductImages()));
     }
 
     /**
      * @return array
-     * @throws \Magento\Framework\Exception\FileSystemException
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws FileSystemException
+     * @throws LocalizedException
      */
-    protected function getUnusedProductImages()
+    protected function getUnusedProductImages(): array
     {
         if (!isset($this->unusedImages)) {
             $this->unusedImages = [];
-            $this->unusedImages = array_diff(array_keys($this->getPhysicalProductImages()), $this->getDatabaseProductImages());
+            $this->unusedImages = array_diff(
+                array_keys($this->getPhysicalProductImages()),
+                $this->getDatabaseProductImages()
+            );
         }
 
         return $this->unusedImages;
@@ -191,10 +217,10 @@ class AbstractCommand extends Command
 
     /**
      * @return int
-     * @throws \Magento\Framework\Exception\FileSystemException
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws FileSystemException
+     * @throws LocalizedException
      */
-    public function getUnusedProductImageCount()
+    public function getUnusedProductImageCount(): int
     {
         return count(array_unique($this->getUnusedProductImages()));
     }
@@ -203,17 +229,20 @@ class AbstractCommand extends Command
      * Get duplicate physical images
      *
      * @return array
-     * @throws \Magento\Framework\Exception\FileSystemException
+     * @throws FileSystemException
      */
-    public function getDuplicateProductImages()
+    public function getDuplicateProductImages(): array
     {
         if (!isset($this->duplicateImages)) {
             $this->duplicateImages = [];
             $physicalImages = array_map(
-                function($physicalImage) { return $physicalImage['hash']; },
+                function ($physicalImage) {
+                return $physicalImage['hash'];
+                },
                 $this->getPhysicalProductImages()
             );
-            foreach (array_count_values($physicalImages) as $hash => $count){
+
+            foreach (array_count_values($physicalImages) as $hash => $count) {
                 if ($count > 1) {
                     $this->duplicateImages[$hash] = array_keys($physicalImages, $hash);
                 }
@@ -227,29 +256,34 @@ class AbstractCommand extends Command
      * Get count of duplicate product images
      *
      * @return int
-     * @throws \Magento\Framework\Exception\FileSystemException
+     * @throws FileSystemException
      */
-    public function getDuplicateProductImageCount()
+    public function getDuplicateProductImageCount(): int
     {
         $duplicateImages = $this->getDuplicateProductImages();
+
         return (int)array_sum(array_map("count", $duplicateImages)) - count($duplicateImages);
     }
 
     /**
      * @param array $where
+     *
      * @return \Generator
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
-    protected function getDatabaseProductImagesGenerator(array $where = []): \Generator
-    {
+    protected function getDatabaseProductImagesGenerator(
+        array $where = []
+    ): \Generator {
         $select = $this->getallImagesSelect();
 
         if (!empty($where)) {
-            if (!isset($where['value']))
+            if (!isset($where['value'])) {
                 $where['value'] = null;
+            }
 
-            if (!isset($where['type']))
+            if (!isset($where['type'])) {
                 $where['type'] = null;
+            }
 
             $select = $select->where($where['cond'], $where['value'], $where['type']);
 
@@ -260,7 +294,7 @@ class AbstractCommand extends Command
             'value_id',
             $select,
             $this->batchSize,
-            \Magento\Framework\DB\Query\BatchIteratorInterface::NON_UNIQUE_FIELD_ITERATOR
+            BatchIteratorInterface::NON_UNIQUE_FIELD_ITERATOR
         );
 
         foreach ($batchSelectIterator as $select) {
@@ -270,8 +304,6 @@ class AbstractCommand extends Command
         }
     }
 
-
-
     /**
      * Return Select to fetch all products images
      *
@@ -279,7 +311,8 @@ class AbstractCommand extends Command
      */
     protected function getAllImagesSelect(): Select
     {
-        return $this->connection->select()
+        return $this->connection
+            ->select()
             ->from(
                 ['images' => $this->resourceConnection->getTableName(Gallery::GALLERY_TABLE)],
                 ['value_id as id', 'value as filepath']
@@ -287,22 +320,27 @@ class AbstractCommand extends Command
     }
 
     /**
-     * @param $filepath
+     * @param string $filepath
+     *
      * @return bool
-     * @throws \Magento\Framework\Exception\FileSystemException
+     * @throws FileSystemException
      */
-    protected function doesFileExist($filepath)
-    {
+    protected function doesFileExist(
+        string $filepath
+    ): bool {
         return $this->fileDriver->isExists($this->getFullImagePath($filepath));
     }
 
     /**
-     * @param $imagePath
-     * @throws \Magento\Framework\Exception\FileSystemException
+     * @param string $imagePath
+     *
+     * @return bool
+     * @throws FileSystemException
      */
-    protected function deleteFile($imagePath)
-    {
-        $this->fileDriver->deleteFile($this->getFullImagePath($imagePath));
+    protected function deleteFile(
+        string $imagePath
+    ) {
+        return $this->fileDriver->deleteFile($this->getFullImagePath($imagePath));
     }
 
     /**
@@ -315,6 +353,7 @@ class AbstractCommand extends Command
 
     /**
      * @param $filename
+     *
      * @return string
      */
     protected function getFullImagePath($filename)
@@ -324,12 +363,19 @@ class AbstractCommand extends Command
         );
     }
 
+    /**
+     * @param array $headers
+     * @param int $padding
+     *
+     * @return string
+     */
     protected function getOutputDivider(array $headers, int $padding)
     {
         $divider = '+-';
 
         foreach ($headers as $key => $header) {
             $divider .= str_pad('', $padding, '-');
+
             if ($key === array_key_last($headers)) {
                 $divider .= '-+';
             } else {
@@ -340,12 +386,19 @@ class AbstractCommand extends Command
         return $divider;
     }
 
+    /**
+     * @param array $headers
+     * @param int $padding
+     *
+     * @return string
+     */
     protected function getOutputTitles(array $headers, int $padding)
     {
         $titleLine = '| ';
 
         foreach ($headers as $key => $header) {
             $titleLine .= str_pad($header, $padding, ' ');
+
             if ($key === array_key_last($headers)) {
                 $titleLine .= ' |';
             } else {

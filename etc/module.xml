@@ -3,6 +3,7 @@
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
     <module name="NathanDay_CatalogImagesClean">
         <sequence>
+            <module name="Magento_Catalog" />
         </sequence>
     </module>
 </config>

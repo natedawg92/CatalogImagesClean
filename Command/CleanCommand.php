@@ -130,7 +130,7 @@ class CleanCommand extends AbstractCommand
             return Cli::RETURN_SUCCESS;
         }
 
-        if ($missingImageCount < 0) {
+        if ($missingImageCount > 0) {
             $output->writeln('<comment>You are about to remove database Records.</comment>');
             $output->writeln('<comment>It is recommended to take a database backup before proceeding</comment>');
             $output->writeln('');
@@ -400,7 +400,6 @@ class CleanCommand extends AbstractCommand
             && $this->getDuplicateProductImageCount() > 0
         ) {
             $imagePaths = [];
-            $duplicateImages = $this->getDuplicateProductImages();
             array_walk_recursive(
                 $duplicateImages,
                 function ($a) use (&$imagePaths) {
